@@ -2,7 +2,7 @@
    "name": "glousx/glousx",
    "description": "A server software for Minecraft: Pocket Edition written in PHP",
    "type": "project",
-   "license": "LGPL-3.0",
+   "license": "LGPL-3.0-only",
    "require": {
       "php": ">=8.1",
       "php-64bit": "*",
