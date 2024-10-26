@@ -142,7 +142,7 @@ jobs:
         run: php composer.phar install --no-dev --prefer-dist --no-interaction
 
       - name: Run integration tests
-             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: chmod a+x tests/travis.sh && ./tests/travis.sh
 
       - name: Run PHP-CS-Fixer
         run: php-cs-fixer fix --dry-run --diff --ansi
