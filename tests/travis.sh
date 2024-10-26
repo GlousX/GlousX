@@ -34,7 +34,7 @@ composer self-update --2
 cd tests/plugins/DevTools
 php -dphar.readonly=0 ./src/DevTools/ConsoleScript.php --make ./ --relative ./ --out "$PLUGINS_DIR/DevTools.phar"
 cd ../../..
-composer make-server
+composer make-server --ignore-platform-req=*
 
 if [ -f GlousX.phar ]; then
 	echo Server phar created successfully.
