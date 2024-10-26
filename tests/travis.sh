@@ -31,8 +31,6 @@ make install
 cd ..
 echo "extension=pthreads.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
 composer self-update --2
-cd tests/plugins/DevTools
-php -dphar.readonly=0 ./src/DevTools/ConsoleScript.php --make ./ --relative ./ --out "$PLUGINS_DIR/DevTools.phar"
 cd ../../..
 composer make-server --ignore-platform-req=*
 
