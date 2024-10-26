@@ -19,6 +19,18 @@ rm GlousX.phar 2> /dev/null
 mkdir "$DATA_DIR"
 mkdir "$PLUGINS_DIR"
 
+phpenv config-rm xdebug.ini
+echo | pecl install channel://pecl.php.net/yaml-2.1.0
+git clone https://github.com/pmmp/pthreads.git
+cd pthreads
+git checkout b81ab29df58fa0fb239a9d5ca1c2380a0d087feb
+phpize
+./configure
+make
+make install
+cd ..
+echo "extension=pthreads.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
+composer self-update --2
 cd tests/plugins/DevTools
 php -dphar.readonly=0 ./src/DevTools/ConsoleScript.php --make ./ --relative ./ --out "$PLUGINS_DIR/DevTools.phar"
 cd ../../..
