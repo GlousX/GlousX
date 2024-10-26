@@ -1,119 +1,148 @@
-name: CI (all supported PHP versions)
+name: CI
 
 on:
-  workflow_call:
-    inputs:
-      php:
-        description: 'PHP version in X.Y format'
-        required: true
-        type: string
-
-      #these are parameterized to ease updating
-      pm-version-major:
-        description: 'PocketMine-MP major version'
-        default: 5
-        type: number
-      image:
-        description: 'Runner image to use'
-        default: 'ubuntu-20.04'
-        type: string
+  push:
+  pull_request:
+  workflow_dispatch:
 
 jobs:
+  build-php:
+    name: Prepare PHP
+    runs-on: ${{ matrix.image }}
+    concurrency: php-build-${{ matrix.php }}
+
+    strategy:
+      matrix:
+        image: [ubuntu-20.04]
+        php: [8.0, 8.1, 8.2, 8.3]
+
+    steps:
+      - name: Build and prepare PHP cache
+        uses: pmmp/setup-php-action@6dd74c145250109942b08fc63cd5118edd2fd256
+        with:
+          php-version: ${{ matrix.php }}
+          install-path: "./bin"
+          pm-version-major: "4"
+
   phpstan:
     name: PHPStan analysis
-    runs-on: ${{ inputs.image }}
+    needs: build-php
+    runs-on: ${{ matrix.image }}
 
     strategy:
       fail-fast: false
+      matrix:
+        image: [ubuntu-20.04]
+        php: [8.0.27, 8.1.14, 8.2.1]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
       - name: Setup PHP
-        uses: pmmp/setup-php-action@e232f72a4330a07aae8418e8aa56b64efcdda636
+        uses: pmmp/setup-php-action@6dd74c145250109942b08fc63cd5118edd2fd256
         with:
-          php-version: ${{ inputs.php }}
+          php-version: ${{ matrix.php }}
           install-path: "./bin"
-          pm-version-major: ${{ inputs.pm-version-major }}
+          pm-version-major: "4"
+
+      - name: Install Composer
+        run: curl -sS https://getcomposer.org/installer | php
 
       - name: Restore Composer package cache
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cache/composer/files
             ~/.cache/composer/vcs
-          key: "composer-v2-cache-${{ inputs.php }}-${{ hashFiles('./composer.lock') }}"
+          key: "composer-v2-cache-${{ matrix.php }}-${{ hashFiles('./composer.lock') }}"
           restore-keys: |
             composer-v2-cache-
 
       - name: Install Composer dependencies
-        run: composer install --prefer-dist --no-interaction
+        run: php composer.phar install --prefer-dist --no-interaction
 
       - name: Run PHPStan
         run: ./vendor/bin/phpstan analyze --no-progress --memory-limit=2G
 
   phpunit:
     name: PHPUnit tests
-    runs-on: ${{ inputs.image }}
+    needs: build-php
+    runs-on: ${{ matrix.image }}
     strategy:
       fail-fast: false
+      matrix:
+        image: [ubuntu-20.04]
+        php: [8.0.27, 8.1.14, 8.2.1]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
       - name: Setup PHP
-        uses: pmmp/setup-php-action@e232f72a4330a07aae8418e8aa56b64efcdda636
+        uses: pmmp/setup-php-action@6dd74c145250109942b08fc63cd5118edd2fd256
         with:
-          php-version: ${{ inputs.php }}
+          php-version: ${{ matrix.php }}
           install-path: "./bin"
-          pm-version-major: ${{ inputs.pm-version-major }}
+          pm-version-major: "4"
+
+      - name: Install Composer
+        run: curl -sS https://getcomposer.org/installer | php
 
       - name: Restore Composer package cache
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cache/composer/files
             ~/.cache/composer/vcs
-          key: "composer-v2-cache-${{ inputs.php }}-${{ hashFiles('./composer.lock') }}"
+          key: "composer-v2-cache-${{ matrix.php }}-${{ hashFiles('./composer.lock') }}"
           restore-keys: |
             composer-v2-cache-
 
       - name: Install Composer dependencies
-        run: composer install --prefer-dist --no-interaction
+        run: php composer.phar install --prefer-dist --no-interaction
 
       - name: Run PHPUnit tests
         run: ./vendor/bin/phpunit --bootstrap vendor/autoload.php --fail-on-warning tests/phpunit
 
   integration:
     name: Integration tests
-    runs-on: ${{ inputs.image }}
+    needs: build-php
+    runs-on: ${{ matrix.image }}
     strategy:
       fail-fast: false
+      matrix:
+        image: [ubuntu-20.04]
+        php: [8.0.27, 8.1.14, 8.2.1]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
         with:
           submodules: true
 
       - name: Setup PHP
-        uses: pmmp/setup-php-action@e232f72a4330a07aae8418e8aa56b64efcdda636
+        uses: pmmp/setup-php-action@6dd74c145250109942b08fc63cd5118edd2fd256
         with:
-          php-version: ${{ inputs.php }}
+          php-version: ${{ matrix.php }}
           install-path: "./bin"
-          pm-version-major: ${{ inputs.pm-version-major }}
+          pm-version-major: "4"
+
+      - name: Install Composer
+        run: curl -sS https://getcomposer.org/installer | php
 
       - name: Restore Composer package cache
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cache/composer/files
             ~/.cache/composer/vcs
-          key: "composer-v2-cache-${{ inputs.php }}-${{ hashFiles('./composer.lock') }}"
+          key: "composer-v2-cache-${{ matrix.php }}-${{ hashFiles('./composer.lock') }}"
           restore-keys: |
             composer-v2-cache-
 
       - name: Install Composer dependencies
-        run: composer install --no-dev --prefer-dist --no-interaction
+        run: php composer.phar install --no-dev --prefer-dist --no-interaction
 
       - name: Run integration tests
-        run: ./tests/travis.sh -t4
+             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run PHP-CS-Fixer
+        run: php-cs-fixer fix --dry-run --diff --ansi
